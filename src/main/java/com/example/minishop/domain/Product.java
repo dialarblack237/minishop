@@ -1,11 +1,10 @@
 package com.example.minishop.domain;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 
 @Entity
 @Table(name = "products")
-public class Product {
+public class Product extends AuditedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -14,14 +13,16 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    // Money stored as integer cents (Lesson 1.4.1: never float).
     @Column(nullable = false)
     private int priceCents;
 
+    // Stock count — the schema adds CHECK (stock >= 0).
     @Column(nullable = false)
     private int stock;
 
-    @Column(nullable = false)
-    private Instant createdAt = Instant.now();
+    @Version
+    private int version;
 
     protected Product() {}
 
@@ -38,5 +39,5 @@ public class Product {
     public void setPriceCents(int v)    { this.priceCents = v; }
     public int getStock()               { return stock; }
     public void setStock(int v)         { this.stock = v; }
-    public Instant getCreatedAt()       { return createdAt; }
+    public int getVersion()             { return version; }
 }
