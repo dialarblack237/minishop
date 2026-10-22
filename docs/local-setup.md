@@ -38,3 +38,12 @@ In a PowerShell window:
 ```powershell
 Get-Service Memurai            # should show Status: Running
 memurai-cli ping               # should return PONG
+
+## Kafka inspection tools
+- **Kafka UI (Kafbat UI)**: v1.0.0 JAR at `C:\tools\kafbat-ui.jar`
+  - Config: `C:\tools\kafbat-ui-config.yml` (points at `localhost:9092`)
+  - Start command (keep the window open):
+    ```powershell
+    java "-Dspring.config.additional-location=C:\tools\kafbat-ui-config.yml" "--add-opens" "java.rmi/javax.rmi.ssl=ALL-UNNAMED" -jar "C:\tools\kafbat-ui.jar"
+
+    
