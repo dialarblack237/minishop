@@ -1,12 +1,12 @@
 package com.example.minishop.domain;
 
 import jakarta.persistence.*;
-import java.time.Instant;
+
 
 @Entity
 @Table(name = "customers",
        uniqueConstraints = @UniqueConstraint(columnNames = "email"))
-public class Customer {
+public class Customer extends AuditedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,8 +24,8 @@ public class Customer {
     @Column(nullable = false, length = 20)
     private String role = "CUSTOMER";
 
-    @Column(nullable = false)
-    private Instant createdAt = Instant.now();
+    @Version
+    private int version;
 
     protected Customer() {}
 
@@ -35,14 +35,14 @@ public class Customer {
         this.passwordHash = passwordHash;
     }
 
-    public Long getId()                        { return id; }
-    public String getEmail()                   { return email; }
-    public void setEmail(String v)             { this.email = v; }
-    public String getDisplayName()             { return displayName; }
-    public void setDisplayName(String v)       { this.displayName = v; }
-    public String getPasswordHash()            { return passwordHash; }
-    public void setPasswordHash(String v)      { this.passwordHash = v; }
-    public String getRole()                    { return role; }
-    public void setRole(String v)              { this.role = v; }
-    public Instant getCreatedAt()              { return createdAt; }
+    public Long getId()                    { return id; }
+    public String getEmail()               { return email; }
+    public void setEmail(String v)         { this.email = v; }
+    public String getDisplayName()         { return displayName; }
+    public void setDisplayName(String v)   { this.displayName = v; }
+    public String getPasswordHash()        { return passwordHash; }
+    public void setPasswordHash(String v)  { this.passwordHash = v; }
+    public String getRole()                { return role; }
+    public void setRole(String v)          { this.role = v; }
+    public int getVersion()                { return version; }
 }
