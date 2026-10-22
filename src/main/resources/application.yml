@@ -1,0 +1,31 @@
+# Base configuration — the SHAPE. No secrets, no environment-specific values.
+# Spring Boot reads this first, then overlays the active profile's file.
+spring:
+  application:
+    name: minishop
+  profiles:
+    default: dev              # running with no -D flag uses the dev profile
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate must NOT create/alter tables.
+      ddl-auto: validate
+    show-sql: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}   # supplied by profile
+  data:
+    redis:
+      url: ${REDIS_URL}                              # supplied by profile
+  datasource:
+    url: ${DATABASE_URL}                             # supplied by profile
+    username: ${DATABASE_USER}                       # supplied by profile
+    password: ${DATABASE_PASSWORD}                   # supplied by profile
+
+# Actuator — expose health and metrics (used by Module 13 and UptimeRobot)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized

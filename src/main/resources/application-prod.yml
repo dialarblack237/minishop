@@ -1,0 +1,33 @@
+# Prod profile — runs on Render.
+# EVERY value is an env var set in the Render dashboard.
+# Never write a real secret here. If it appears in the repo,
+# it is compromised.
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway owns the schema; never auto-create in prod
+    show-sql: false        # never log SQL with parameters in prod
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: minishop-prod
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        "[spring.json.trusted.packages]": "com.example.minishop.*"
+  data:
+    redis:
+      url: ${REDIS_URL}
+
+management:
+  endpoint:
+    health:
+      show-details: never   # prod: do not leak component status details
