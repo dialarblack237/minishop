@@ -1,0 +1,28 @@
+﻿# ---- Maven build output ----
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# ---- IDE / VS Code ----
+.idea/
+*.iml
+.vscode/settings.json
+.vscode/launch.json
+
+# ---- OS junk ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Logs and secrets ----
+*.log
+.env
+.env.*
+*.pem
+*.key
+
+# ---- Local Kafka/Redis data (added in 3.1.2/3.1.3) ----
+data/
+kafka-data/
+*.pid
