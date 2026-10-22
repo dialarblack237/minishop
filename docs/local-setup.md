@@ -25,3 +25,16 @@ so any future run (or any reviewer of the repo) can reproduce them.
 
 ## How to start Kafka locally
 In a PowerShell window:
+
+## Redis / Memurai
+- On Windows: Memurai (Redis-compatible replacement on port 6379)
+- Version: 4.1.2 (Memurai Developer)
+- Service name: `Memurai` (runs as a Windows service, starts on boot)
+- Port: 6379
+- Client binary: `memurai-cli` (the Redis `redis-cli` equivalent)
+- Verified: `memurai-cli ping` returns `PONG`
+
+## How to check Memurai locally
+```powershell
+Get-Service Memurai            # should show Status: Running
+memurai-cli ping               # should return PONG
