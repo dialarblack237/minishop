@@ -6,9 +6,16 @@ spring:
     username: sa
     password: ""
     driver-class-name: org.h2.Driver
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false   # dev starts from an empty H2 every run; no baseline needed
+    clean-disabled: false        # allowed in dev only; set to true in prod (Module 12)
+
   jpa:
     hibernate:
-      ddl-auto: create-drop   # H2 in-memory: schema is created fresh each run
+      ddl-auto: validate   # H2 in-memory: schema is created fresh each run
     show-sql: true            # helpful while learning
   kafka:
     bootstrap-servers: localhost:9092
@@ -30,3 +37,4 @@ logging:
   level:
     root: INFO
     "[com.example.minishop]": DEBUG
+
