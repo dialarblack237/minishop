@@ -4,6 +4,7 @@ import com.example.minishop.service.ProductService;
 import com.example.minishop.web.dto.ProductDto;
 import com.example.minishop.web.dto.ProductRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,9 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<Page<ProductDto>> list(Pageable pageable) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
         return ResponseEntity.ok(service.list(pageable));
     }
 

@@ -43,3 +43,9 @@ Content-Type: application/json
   "priceCents": -1,
   "stock": 0
 }
+
+### List products — default paging (page 0, size 20)
+GET http://localhost:8080/products
+
+### List products — request 500 items, should be capped to 100
+GET http://localhost:8080/products?size=500
