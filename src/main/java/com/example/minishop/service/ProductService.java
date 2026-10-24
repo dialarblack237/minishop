@@ -47,4 +47,10 @@ public class ProductService {
         p.setStock(req.stock());
         return ProductDto.from(productRepo.save(p));
     }
+    @CacheEvict(cacheNames = "product:list", allEntries = true)
+    @Transactional
+    public ProductDto create(ProductRequest req) {
+        Product p = new Product(req.name(), req.priceCents(), req.stock());
+        return ProductDto.from(productRepo.save(p));
+    }
 }

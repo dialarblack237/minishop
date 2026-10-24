@@ -1,0 +1,25 @@
+### List products (200)
+GET http://localhost:8080/products
+
+### Get one product — seeded id 1 (200)
+GET http://localhost:8080/products/1
+
+### Create a product (201 + Location)
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{
+  "name": "Test mug",
+  "priceCents": 1500,
+  "stock": 5
+}
+
+### Update a product — replace 4 with the id from the create response (204)
+PUT http://localhost:8080/products/4
+Content-Type: application/json
+
+{
+  "name": "Test mug v2",
+  "priceCents": 1800,
+  "stock": 3
+}
