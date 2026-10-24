@@ -5,28 +5,41 @@ import com.example.minishop.domain.Order;
 import com.example.minishop.domain.OrderHistory;
 import com.example.minishop.domain.OrderItem;
 import com.example.minishop.domain.OrderState;
+import com.example.minishop.domain.OutboxRow;
 import com.example.minishop.domain.Product;
+import com.example.minishop.event.OrderCreated;
 import com.example.minishop.repository.OrderHistoryRepository;
 import com.example.minishop.repository.OrderRepository;
+import com.example.minishop.repository.OutboxRepository;
 import com.example.minishop.repository.ProductRepository;
 import com.example.minishop.web.dto.OrderDto;
 import com.example.minishop.web.dto.OrderRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 public class OrderService {
 
     private final OrderRepository orderRepo;
     private final OrderHistoryRepository historyRepo;
+    private final OutboxRepository outboxRepo;
     private final ProductRepository productRepo;
+    private final ObjectMapper objectMapper;
 
     public OrderService(OrderRepository orderRepo,
                         OrderHistoryRepository historyRepo,
-                        ProductRepository productRepo) {
+                        OutboxRepository outboxRepo,
+                        ProductRepository productRepo,
+                        ObjectMapper objectMapper) {
         this.orderRepo = orderRepo;
         this.historyRepo = historyRepo;
+        this.outboxRepo = outboxRepo;
         this.productRepo = productRepo;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -54,9 +67,20 @@ public class OrderService {
         order.setTotalCents(total);
 
         Order saved = orderRepo.save(order);
-
         historyRepo.save(OrderHistory.of(saved, null, OrderState.CREATED, "OrderCreated"));
 
+        UUID eventId = UUID.randomUUID();
+        OrderCreated event = OrderCreated.from(eventId, saved);
+        outboxRepo.save(OutboxRow.forEvent(eventId, "orders", toJson(event)));
+
         return OrderDto.from(saved);
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize outbox payload", e);
+        }
     }
 }
