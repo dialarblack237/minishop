@@ -1,0 +1,78 @@
+package com.example.minishop.service;
+
+import com.example.minishop.domain.Customer;
+import com.example.minishop.repository.CustomerRepository;
+import com.example.minishop.repository.OrderHistoryRepository;
+import com.example.minishop.repository.OrderRepository;
+import com.example.minishop.repository.OutboxRepository;
+import com.example.minishop.web.dto.OrderRequest;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@SpringBootTest
+@ActiveProfiles("dev")
+class OrderServiceAtomicityTest {
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private CustomerRepository customerRepo;
+
+    @Autowired
+    private OrderRepository orderRepo;
+
+    @Autowired
+    private OrderHistoryRepository historyRepo;
+
+    @Autowired
+    private OutboxRepository outboxRepo;
+
+    @Autowired
+    private TransactionTemplate txTemplate;
+
+    @Test
+    void successful_placeOrder_writes_four_rows_atomically() {
+        Customer customer = customerRepo.findByEmail("admin@minishop.local").orElseThrow();
+        long ordersBefore = orderRepo.count();
+        long historyBefore = historyRepo.count();
+        long outboxBefore = outboxRepo.count();
+
+        OrderRequest req = new OrderRequest(List.of(
+                new OrderRequest.OrderLine(1L, 1),
+                new OrderRequest.OrderLine(2L, 2)
+        ));
+        orderService.placeOrder(req, customer);
+
+        assertThat(orderRepo.count()).isEqualTo(ordersBefore + 1);
+        assertThat(historyRepo.count()).isEqualTo(historyBefore + 1);
+        assertThat(outboxRepo.count()).isEqualTo(outboxBefore + 1);
+    }
+
+    @Test
+    void failing_placeOrder_writes_nothing() {
+        Customer customer = customerRepo.findByEmail("admin@minishop.local").orElseThrow();
+        long ordersBefore = orderRepo.count();
+        long historyBefore = historyRepo.count();
+        long outboxBefore = outboxRepo.count();
+
+        OrderRequest bad = new OrderRequest(List.of(
+                new OrderRequest.OrderLine(1L, 999999)
+        ));
+
+        assertThatThrownBy(() -> orderService.placeOrder(bad, customer))
+                .isInstanceOf(StockUnavailable.class);
+
+        assertThat(orderRepo.count()).isEqualTo(ordersBefore);
+        assertThat(historyRepo.count()).isEqualTo(historyBefore);
+        assertThat(outboxRepo.count()).isEqualTo(outboxBefore);
+    }
+}

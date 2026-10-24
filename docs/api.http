@@ -97,3 +97,14 @@ Content-Type: application/json
     { "productId": 2, "quantity": 1 }
   ]
 }
+
+### Place an order — should create order + items + history + outbox
+POST http://localhost:8080/orders
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": 1, "quantity": 1 },
+    { "productId": 3, "quantity": 1 }
+  ]
+}
