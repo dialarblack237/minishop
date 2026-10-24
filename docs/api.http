@@ -23,3 +23,23 @@ Content-Type: application/json
   "priceCents": 1800,
   "stock": 3
 }
+
+### Create with invalid input — expect 400
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{
+  "name": "",
+  "priceCents": -5,
+  "stock": 0
+}
+
+### Update with invalid input — expect 400
+PUT http://localhost:8080/products/1
+Content-Type: application/json
+
+{
+  "name": "",
+  "priceCents": -1,
+  "stock": 0
+}
