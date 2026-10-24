@@ -65,3 +65,23 @@ Content-Type: application/json
 
 ### Get existing product — expect 200 (control)
 GET http://localhost:8080/products/1
+
+
+
+### 404 — product missing
+GET http://localhost:8080/products/999
+
+### 400 — validation (blank name, negative price)
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{"name":"","priceCents":-5,"stock":0}
+
+### 200 — control (existing product)
+GET http://localhost:8080/products/1
+
+### 400 — same request body, different fields
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{"name":"A valid name","priceCents":100,"stock":-1}

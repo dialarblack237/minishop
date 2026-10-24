@@ -1,6 +1,6 @@
 package com.example.minishop.service;
 
-public class ProductNotFound extends RuntimeException {
+public class ProductNotFound extends NotFoundException {
 
     private final long id;
 
