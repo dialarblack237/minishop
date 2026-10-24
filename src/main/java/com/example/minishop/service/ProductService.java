@@ -25,7 +25,7 @@ public class ProductService {
     public ProductDto get(long id) {
         return productRepo.findById(id)
                 .map(ProductDto::from)
-                .orElseThrow(() -> new IllegalStateException("Product not found: " + id));
+                .orElseThrow(() -> new ProductNotFound(id));
     }
 
     @Cacheable(cacheNames = "product:list",
@@ -38,15 +38,17 @@ public class ProductService {
         @CacheEvict(cacheNames = "product", key = "#id"),
         @CacheEvict(cacheNames = "product:list", allEntries = true)
     })
+    
     @Transactional
     public ProductDto update(long id, ProductRequest req) {
         Product p = productRepo.findById(id)
-                .orElseThrow(() -> new IllegalStateException("Product not found: " + id));
+                .orElseThrow(() -> new ProductNotFound(id));
         p.setName(req.name());
         p.setPriceCents(req.priceCents());
         p.setStock(req.stock());
         return ProductDto.from(productRepo.save(p));
     }
+
     @CacheEvict(cacheNames = "product:list", allEntries = true)
     @Transactional
     public ProductDto create(ProductRequest req) {

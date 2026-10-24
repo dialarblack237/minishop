@@ -49,3 +49,19 @@ GET http://localhost:8080/products
 
 ### List products — request 500 items, should be capped to 100
 GET http://localhost:8080/products?size=500
+
+### Get missing product — expect 404 with problem-details
+GET http://localhost:8080/products/999
+
+### Validation error — expect 400 with field errors
+POST http://localhost:8080/products
+Content-Type: application/json
+
+{
+  "name": "",
+  "priceCents": -5,
+  "stock": 0
+}
+
+### Get existing product — expect 200 (control)
+GET http://localhost:8080/products/1
