@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
+import jakarta.validation.Valid;
 
 import java.net.URI;
 
@@ -38,7 +39,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductDto> create(@RequestBody ProductRequest req,
+    public ResponseEntity<ProductDto> create(@Valid @RequestBody ProductRequest req,
                                              UriComponentsBuilder uriBuilder) {
         ProductDto created = service.create(req);
         URI location = uriBuilder.path("/products/{id}")
@@ -49,7 +50,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable long id,
-                                       @RequestBody ProductRequest req) {
+                                       @Valid @RequestBody ProductRequest req) {
         service.update(id, req);
         return ResponseEntity.noContent().build();
     }
