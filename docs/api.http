@@ -85,3 +85,15 @@ POST http://localhost:8080/products
 Content-Type: application/json
 
 {"name":"A valid name","priceCents":100,"stock":-1}
+
+
+### Place an order — expect 202, Location header, state CREATED
+POST http://localhost:8080/orders
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": 1, "quantity": 2 },
+    { "productId": 2, "quantity": 1 }
+  ]
+}
