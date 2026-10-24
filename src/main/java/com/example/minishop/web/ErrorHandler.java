@@ -1,9 +1,11 @@
 package com.example.minishop.web;
 
 import com.example.minishop.config.TraceIdFilter;
-import com.example.minishop.service.EmailTaken;
-import com.example.minishop.service.Forbidden;
+import com.example.minishop.service.AuthException;
+import com.example.minishop.service.ConflictException;
+import com.example.minishop.service.NotFoundException;
 import com.example.minishop.service.ProductNotFound;
+import com.example.minishop.service.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -25,61 +27,53 @@ public class ErrorHandler {
 
     @ExceptionHandler(ProductNotFound.class)
     public ProblemDetail onProductNotFound(ProductNotFound e) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Product " + e.getId() + " does not exist");
-        pd.setTitle("Product not found");
-        pd.setType(URI.create(BASE + "not-found"));
-        pd.setProperty(TraceIdFilter.TRACE_ID, MDC.get(TraceIdFilter.TRACE_ID));
+        ProblemDetail pd = problem(HttpStatus.NOT_FOUND, "Product not found", e);
+        pd.setProperty("productId", e.getId());
         return pd;
     }
 
-    @ExceptionHandler(EmailTaken.class)
-    public ProblemDetail onEmailTaken(EmailTaken e) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Email already registered");
-        pd.setTitle("Email conflict");
-        pd.setType(URI.create(BASE + "conflict"));
-        pd.setProperty("field", "email");
-        pd.setProperty(TraceIdFilter.TRACE_ID, MDC.get(TraceIdFilter.TRACE_ID));
-        return pd;
+    @ExceptionHandler(NotFoundException.class)
+    public ProblemDetail onNotFound(NotFoundException e) {
+        return problem(HttpStatus.NOT_FOUND, "Not found", e);
     }
 
-    @ExceptionHandler(Forbidden.class)
-    public ProblemDetail onForbidden(Forbidden e) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "You are not allowed to do this");
-        pd.setTitle("Forbidden");
-        pd.setType(URI.create(BASE + "forbidden"));
-        pd.setProperty(TraceIdFilter.TRACE_ID, MDC.get(TraceIdFilter.TRACE_ID));
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail onConflict(ConflictException e) {
+        return problem(HttpStatus.CONFLICT, "Conflict", e);
+    }
+
+    @ExceptionHandler(AuthException.class)
+    public ProblemDetail onAuth(AuthException e) {
+        return problem(HttpStatus.FORBIDDEN, "Access denied", e);
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ProblemDetail onValidationException(ValidationException e) {
+        ProblemDetail pd = problem(HttpStatus.BAD_REQUEST, "Validation failed", e);
+        pd.setProperty("errors", e.fieldErrors());
         return pd;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail onValidation(MethodArgumentNotValidException e) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "One or more fields are invalid");
-        pd.setTitle("Validation failed");
-        pd.setType(URI.create(BASE + "validation"));
+    public ProblemDetail onBeanValidation(MethodArgumentNotValidException e) {
+        ProblemDetail pd = problem(HttpStatus.BAD_REQUEST, "Validation failed", e);
         List<Map<String, String>> errors = e.getBindingResult().getFieldErrors().stream()
                 .map(f -> Map.of("field", f.getField(), "message", f.getDefaultMessage()))
                 .toList();
         pd.setProperty("errors", errors);
-        pd.setProperty(TraceIdFilter.TRACE_ID, MDC.get(TraceIdFilter.TRACE_ID));
         return pd;
     }
 
     @ExceptionHandler(Exception.class)
-    public ProblemDetail onAnyException(Exception e) {
+    public ProblemDetail onAny(Exception e) {
         log.error("unhandled exception", e);
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Something went wrong");
-        pd.setTitle("Internal server error");
-        pd.setType(URI.create(BASE + "server"));
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong", e);
+    }
+
+    private ProblemDetail problem(HttpStatus status, String title, Exception e) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, e.getMessage());
+        pd.setTitle(title);
+        pd.setType(URI.create(BASE + status.value()));
         pd.setProperty(TraceIdFilter.TRACE_ID, MDC.get(TraceIdFilter.TRACE_ID));
         return pd;
     }
