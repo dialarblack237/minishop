@@ -45,8 +45,12 @@ public class OutboxRow {
         this.publishedAt = Instant.now();
     }
 
-    public void incrementAttempts() {
+    public void recordFailure() {
         this.attempts++;
+    }
+
+    public boolean exceededMaxAttempts(int max) {
+        return this.attempts >= max;
     }
 
     public Long getId()           { return id; }

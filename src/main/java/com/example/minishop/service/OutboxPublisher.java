@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -16,13 +17,18 @@ public class OutboxPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxPublisher.class);
     private static final int BATCH_SIZE = 100;
+    private static final int MAX_ATTEMPTS = 5;
+    private static final long KAFKA_TIMEOUT_SECONDS = 5;
 
     private final OutboxRepository outboxRepo;
+    private final OutboxService outboxService;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     public OutboxPublisher(OutboxRepository outboxRepo,
+                           OutboxService outboxService,
                            KafkaTemplate<String, String> kafkaTemplate) {
         this.outboxRepo = outboxRepo;
+        this.outboxService = outboxService;
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -32,16 +38,18 @@ public class OutboxPublisher {
         if (rows.isEmpty()) return;
 
         for (OutboxRow row : rows) {
+            if (row.exceededMaxAttempts(MAX_ATTEMPTS)) {
+                continue;
+            }
             try {
                 kafkaTemplate.send(row.getTopic(), row.getEventId().toString(), row.getPayload())
-                        .get(5, TimeUnit.SECONDS);
+                        .get(KAFKA_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-                row.markPublished();
-                outboxRepo.save(row);
+                outboxService.markPublished(row.getId());
             } catch (Exception e) {
-                log.warn("publisher: failed on event {} — will retry next run", row.getEventId(), e);
-                row.incrementAttempts();
-                outboxRepo.save(row);
+                outboxService.recordFailure(row.getId());
+                log.warn("publisher: row {} attempt {} failed — will retry next run",
+                        row.getId(), row.getAttempts() + 1, e);
                 return;
             }
         }
