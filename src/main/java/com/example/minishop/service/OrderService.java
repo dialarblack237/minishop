@@ -1,9 +1,12 @@
 package com.example.minishop.service;
 
+import com.example.minishop.domain.Customer;
 import com.example.minishop.domain.Order;
+import com.example.minishop.domain.OrderHistory;
 import com.example.minishop.domain.OrderItem;
 import com.example.minishop.domain.OrderState;
 import com.example.minishop.domain.Product;
+import com.example.minishop.repository.OrderHistoryRepository;
 import com.example.minishop.repository.OrderRepository;
 import com.example.minishop.repository.ProductRepository;
 import com.example.minishop.web.dto.OrderDto;
@@ -15,15 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderService {
 
     private final OrderRepository orderRepo;
+    private final OrderHistoryRepository historyRepo;
     private final ProductRepository productRepo;
 
-    public OrderService(OrderRepository orderRepo, ProductRepository productRepo) {
+    public OrderService(OrderRepository orderRepo,
+                        OrderHistoryRepository historyRepo,
+                        ProductRepository productRepo) {
         this.orderRepo = orderRepo;
+        this.historyRepo = historyRepo;
         this.productRepo = productRepo;
     }
 
     @Transactional
-    public OrderDto placeOrder(OrderRequest req, com.example.minishop.domain.Customer customer) {
+    public OrderDto placeOrder(OrderRequest req, Customer customer) {
         if (req.items() == null || req.items().isEmpty()) {
             throw new IllegalArgumentException("cart must not be empty");
         }
@@ -46,6 +53,10 @@ public class OrderService {
         }
         order.setTotalCents(total);
 
-        return OrderDto.from(orderRepo.save(order));
+        Order saved = orderRepo.save(order);
+
+        historyRepo.save(OrderHistory.of(saved, null, OrderState.CREATED, "OrderCreated"));
+
+        return OrderDto.from(saved);
     }
 }
