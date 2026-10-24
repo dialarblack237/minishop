@@ -3,6 +3,10 @@ package com.example.minishop.web;
 import com.example.minishop.service.ProductService;
 import com.example.minishop.web.dto.ProductDto;
 import com.example.minishop.web.dto.ProductRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,10 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
-import jakarta.validation.Valid;
 
 import java.net.URI;
 
+@Tag(name = "Products", description = "Read and (for ADMIN) manage products; reads are cached.")
 @RestController
 @RequestMapping("/products")
 public class ProductController {
@@ -29,6 +33,10 @@ public class ProductController {
         this.service = service;
     }
 
+    @Operation(
+            summary = "List products, paginated",
+            description = "Returns one page of products. Use ?page=&size=&sort=. Page size is capped at 100.")
+    @ApiResponse(responseCode = "200", description = "A page of products")
     @GetMapping
     public ResponseEntity<Page<ProductDto>> list(Pageable pageable) {
         if (pageable.getPageSize() > 100) {
@@ -37,11 +45,21 @@ public class ProductController {
         return ResponseEntity.ok(service.list(pageable));
     }
 
+    @Operation(
+            summary = "Read one product by id",
+            description = "Returns 200 with the product, or 404 if it does not exist.")
+    @ApiResponse(responseCode = "200", description = "Product found")
+    @ApiResponse(responseCode = "404", description = "Product not found")
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> get(@PathVariable long id) {
         return ResponseEntity.ok(service.get(id));
     }
 
+    @Operation(
+            summary = "Create a product",
+            description = "Returns 201 with a Location header. Requires ADMIN role (wired in Module 9).")
+    @ApiResponse(responseCode = "201", description = "Product created")
+    @ApiResponse(responseCode = "400", description = "Validation failed")
     @PostMapping
     public ResponseEntity<ProductDto> create(@Valid @RequestBody ProductRequest req,
                                              UriComponentsBuilder uriBuilder) {
@@ -52,6 +70,12 @@ public class ProductController {
         return ResponseEntity.created(location).body(created);
     }
 
+    @Operation(
+            summary = "Update a product",
+            description = "Returns 204 No Content. Requires ADMIN role (wired in Module 9).")
+    @ApiResponse(responseCode = "204", description = "Product updated")
+    @ApiResponse(responseCode = "404", description = "Product not found")
+    @ApiResponse(responseCode = "400", description = "Validation failed")
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable long id,
                                        @Valid @RequestBody ProductRequest req) {
