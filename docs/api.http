@@ -107,3 +107,38 @@ Content-Type: application/json
     { "productId": 1, "quantity": 1 }
   ]
 }
+
+### 1. Fresh order — expect 202, note the id
+POST http://localhost:8080/orders
+Content-Type: application/json
+Idempotency-Key: test-key-001
+
+{
+  "items": [{"productId": 1, "quantity": 1}]
+}
+
+### 2. Same key — expect 200, SAME id as request 1
+POST http://localhost:8080/orders
+Content-Type: application/json
+Idempotency-Key: test-key-001
+
+{
+  "items": [{"productId": 1, "quantity": 1}]
+}
+
+### 3. Different key — expect 202, DIFFERENT id
+POST http://localhost:8080/orders
+Content-Type: application/json
+Idempotency-Key: test-key-002
+
+{
+  "items": [{"productId": 1, "quantity": 1}]
+}
+
+### 4. No key — expect 400
+POST http://localhost:8080/orders
+Content-Type: application/json
+
+{
+  "items": [{"productId": 1, "quantity": 1}]
+}
