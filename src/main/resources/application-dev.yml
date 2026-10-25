@@ -43,5 +43,5 @@ logging:
 app:
   payments:
     simulator:
-      mode: approve
+      mode: decline
       slow-seconds: 2
