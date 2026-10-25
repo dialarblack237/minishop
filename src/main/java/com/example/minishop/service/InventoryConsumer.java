@@ -2,11 +2,13 @@ package com.example.minishop.service;
 
 import com.example.minishop.domain.OutboxRow;
 import com.example.minishop.domain.Product;
+import com.example.minishop.domain.Reservation;
 import com.example.minishop.event.InventoryRejected;
 import com.example.minishop.event.InventoryReserved;
 import com.example.minishop.event.OrderCreated;
 import com.example.minishop.repository.OutboxRepository;
 import com.example.minishop.repository.ProductRepository;
+import com.example.minishop.repository.ReservationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,15 +26,18 @@ public class InventoryConsumer {
     private static final Logger log = LoggerFactory.getLogger(InventoryConsumer.class);
 
     private final ProductRepository productRepo;
+    private final ReservationRepository reservationRepo;
     private final DedupeService dedupeService;
     private final OutboxRepository outboxRepo;
     private final ObjectMapper objectMapper;
 
     public InventoryConsumer(ProductRepository productRepo,
+                             ReservationRepository reservationRepo,
                              DedupeService dedupeService,
                              OutboxRepository outboxRepo,
                              ObjectMapper objectMapper) {
         this.productRepo = productRepo;
+        this.reservationRepo = reservationRepo;
         this.dedupeService = dedupeService;
         this.outboxRepo = outboxRepo;
         this.objectMapper = objectMapper;
@@ -62,6 +67,10 @@ public class InventoryConsumer {
 
                 product.setStock(product.getStock() - item.quantity());
                 productRepo.save(product);
+
+                reservationRepo.save(new Reservation(
+                        event.orderId(), item.productId(), item.quantity()));
+
                 reservedItems.add(new InventoryReserved.Item(item.productId(), item.quantity()));
             } catch (ProductNotFound | StockUnavailable rejected) {
                 InventoryRejected reject = new InventoryRejected(
@@ -71,7 +80,7 @@ public class InventoryConsumer {
                         item.productId());
                 outboxRepo.save(OutboxRow.forEvent(
                         reject.eventId(), "orders", objectMapper.writeValueAsString(reject)));
-                return;
+                throw new ReservationFailed(reject);
             }
         }
 
