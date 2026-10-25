@@ -41,6 +41,14 @@ public class OutboxRow {
         return row;
     }
 
+    public static OutboxRow forward(String nextTopic, String originalPayload) {
+        OutboxRow row = new OutboxRow();
+        row.eventId = UUID.randomUUID();
+        row.topic = nextTopic;
+        row.payload = originalPayload;
+        return row;
+    }
+
     public void markPublished() {
         this.publishedAt = Instant.now();
     }
