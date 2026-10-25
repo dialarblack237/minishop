@@ -13,6 +13,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Configuration
 @org.springframework.cache.annotation.EnableCaching
@@ -35,8 +36,14 @@ public class CacheConfig {
                 .serializeValuesWith(
                         RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
+        RedisCacheConfiguration listConfig = defaults
+                .entryTtl(Duration.ofMinutes(2));
+
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(defaults)
+                .withInitialCacheConfigurations(Map.of(
+                        "product:list", listConfig
+                ))
                 .build();
     }
 }
