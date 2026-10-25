@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -35,9 +34,6 @@ class OrderServiceAtomicityTest {
 
     @Autowired
     private OutboxRepository outboxRepo;
-
-    @Autowired
-    private TransactionTemplate txTemplate;
 
     @Test
     void successful_placeOrder_writes_four_rows_atomically() {
@@ -64,12 +60,12 @@ class OrderServiceAtomicityTest {
         long historyBefore = historyRepo.count();
         long outboxBefore = outboxRepo.count();
 
-        OrderRequest bad = new OrderRequest(List.of(
-                new OrderRequest.OrderLine(1L, 999999)
+        OrderRequest missingProduct = new OrderRequest(List.of(
+                new OrderRequest.OrderLine(999_999L, 1)
         ));
 
-        assertThatThrownBy(() -> orderService.placeOrder(bad, customer))
-                .isInstanceOf(StockUnavailable.class);
+        assertThatThrownBy(() -> orderService.placeOrder(missingProduct, customer))
+                .isInstanceOf(ProductNotFound.class);
 
         assertThat(orderRepo.count()).isEqualTo(ordersBefore);
         assertThat(historyRepo.count()).isEqualTo(historyBefore);

@@ -1,6 +1,7 @@
 package com.example.minishop.service;
 
 import com.example.minishop.domain.Customer;
+import com.example.minishop.domain.IdemRow;
 import com.example.minishop.domain.Order;
 import com.example.minishop.domain.OrderHistory;
 import com.example.minishop.domain.OrderItem;
@@ -28,18 +29,34 @@ public class OrderService {
     private final OrderHistoryRepository historyRepo;
     private final OutboxRepository outboxRepo;
     private final ProductRepository productRepo;
+    private final IdemService idemService;
     private final ObjectMapper objectMapper;
 
     public OrderService(OrderRepository orderRepo,
                         OrderHistoryRepository historyRepo,
                         OutboxRepository outboxRepo,
                         ProductRepository productRepo,
+                        IdemService idemService,
                         ObjectMapper objectMapper) {
         this.orderRepo = orderRepo;
         this.historyRepo = historyRepo;
         this.outboxRepo = outboxRepo;
         this.productRepo = productRepo;
+        this.idemService = idemService;
         this.objectMapper = objectMapper;
+    }
+
+    @Transactional
+    public OrderDto placeOrderIdempotent(String idempotencyKey, OrderRequest req, Customer customer) throws Exception {
+        IdemRow claim = idemService.claim(idempotencyKey);
+
+        if (!claim.getResponseJson().equals("{}")) {
+            return idemService.readResponse(claim);
+        }
+
+        OrderDto created = placeOrder(req, customer);
+        idemService.attachResponse(idempotencyKey, created);
+        return created;
     }
 
     @Transactional
