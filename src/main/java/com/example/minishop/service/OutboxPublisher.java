@@ -25,13 +25,16 @@ public class OutboxPublisher {
     private final OutboxRepository outboxRepo;
     private final OutboxService outboxService;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final PipelineMetrics metrics;
 
     public OutboxPublisher(OutboxRepository outboxRepo,
                            OutboxService outboxService,
-                           KafkaTemplate<String, String> kafkaTemplate) {
+                           KafkaTemplate<String, String> kafkaTemplate,
+                           PipelineMetrics metrics) {
         this.outboxRepo = outboxRepo;
         this.outboxService = outboxService;
         this.kafkaTemplate = kafkaTemplate;
+        this.metrics = metrics;
     }
 
     @Scheduled(fixedDelay = 2000)
@@ -55,10 +58,15 @@ public class OutboxPublisher {
                     record.headers().add("reason",
                             row.getReason().getBytes(StandardCharsets.UTF_8));
                 }
+                if (row.getTraceId() != null) {
+                    record.headers().add("traceId",
+                            row.getTraceId().getBytes(StandardCharsets.UTF_8));
+                }
 
                 kafkaTemplate.send(record).get(KAFKA_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
                 outboxService.markPublished(row.getId());
+                metrics.recordProduced();
             } catch (Exception e) {
                 outboxService.recordFailure(row.getId());
                 log.warn("publisher: row {} attempt {} failed — will retry next run",

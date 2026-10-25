@@ -142,3 +142,11 @@ Content-Type: application/json
 {
   "items": [{"productId": 1, "quantity": 1}]
 }
+
+POST http://localhost:8080/orders
+Content-Type: application/json
+Idempotency-Key: obs-test-001
+
+{
+  "items": [{ "productId": 1, "quantity": 1 }]
+}

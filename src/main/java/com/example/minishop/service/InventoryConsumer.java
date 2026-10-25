@@ -14,6 +14,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -34,17 +35,20 @@ public class InventoryConsumer {
     private final DedupeService dedupeService;
     private final OutboxRepository outboxRepo;
     private final ObjectMapper objectMapper;
+    private final PipelineMetrics metrics;
 
     public InventoryConsumer(ProductRepository productRepo,
                              ReservationRepository reservationRepo,
                              DedupeService dedupeService,
                              OutboxRepository outboxRepo,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             PipelineMetrics metrics) {
         this.productRepo = productRepo;
         this.reservationRepo = reservationRepo;
         this.dedupeService = dedupeService;
         this.outboxRepo = outboxRepo;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     @KafkaListener(topics = "orders", groupId = "inventory-service")
@@ -71,11 +75,15 @@ public class InventoryConsumer {
     public void consume(ConsumerRecord<String, String> record, RetryStage stage, Acknowledgment ack) {
         String payload = record.value();
         int incomingAttempts = readAttempts(record);
+        Header traceHeader = record.headers().lastHeader("traceId");
+        String traceId = traceHeader == null ? "missing" : new String(traceHeader.value(), StandardCharsets.UTF_8);
+        MDC.put("traceId", traceId);
 
         try {
             JsonNode root = objectMapper.readTree(payload);
             if (!"OrderCreated".equals(root.path("type").asText("OrderCreated"))) {
                 ack.acknowledge();
+                metrics.recordConsumed();
                 return;
             }
 
@@ -99,15 +107,20 @@ public class InventoryConsumer {
 
             InventoryReserved reserved = new InventoryReserved(
                     UUID.randomUUID(), event.orderId(), event.totalCents(), reservedItems);
-            outboxRepo.save(OutboxRow.forEvent(
-                    reserved.eventId(), "orders", objectMapper.writeValueAsString(reserved)));
+            outboxRepo.save(OutboxRow.forEventWithTrace(
+                    reserved.eventId(), "orders", objectMapper.writeValueAsString(reserved),
+                    MDC.get("traceId")));
 
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (DuplicateEvent dup) {
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (Exception e) {
             log.warn("inventory failure on stage {}: {}", stage, e.getMessage());
             forward(payload, incomingAttempts, stage, ack);
+        } finally {
+            MDC.remove("traceId");
         }
     }
 
@@ -117,8 +130,9 @@ public class InventoryConsumer {
             String reason = stage == RetryStage.RETRY_5M
                     ? DlqReason.EXHAUSTED_RETRIES.value()
                     : DlqReason.UNKNOWN.value();
-            outboxRepo.save(OutboxRow.forwardWithAttempts(
-                    stage.nextTopic(), payload, reason, nextAttempts));
+            outboxRepo.save(OutboxRow.forwardWithAttemptsAndTrace(
+                    stage.nextTopic(), payload, reason, nextAttempts, MDC.get("traceId")));
+            metrics.recordFailed();
         } catch (Exception e) {
             log.error("forward failed — letting Kafka redeliver", e);
             return;

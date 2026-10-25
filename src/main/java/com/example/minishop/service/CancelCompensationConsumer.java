@@ -18,6 +18,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,7 @@ public class CancelCompensationConsumer {
     private final DedupeService dedupeService;
     private final OutboxRepository outboxRepo;
     private final ObjectMapper objectMapper;
+    private final PipelineMetrics metrics;
 
     public CancelCompensationConsumer(ReservationRepository reservationRepo,
                                       ProductRepository productRepo,
@@ -45,7 +47,8 @@ public class CancelCompensationConsumer {
                                       OrderHistoryRepository historyRepo,
                                       DedupeService dedupeService,
                                       OutboxRepository outboxRepo,
-                                      ObjectMapper objectMapper) {
+                                      ObjectMapper objectMapper,
+                                      PipelineMetrics metrics) {
         this.reservationRepo = reservationRepo;
         this.productRepo = productRepo;
         this.orderRepo = orderRepo;
@@ -53,6 +56,7 @@ public class CancelCompensationConsumer {
         this.dedupeService = dedupeService;
         this.outboxRepo = outboxRepo;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     @KafkaListener(topics = "orders", groupId = "cancel-compensation-service")
@@ -79,11 +83,15 @@ public class CancelCompensationConsumer {
     public void consume(ConsumerRecord<String, String> record, RetryStage stage, Acknowledgment ack) {
         String payload = record.value();
         int incomingAttempts = readAttempts(record);
+        Header traceHeader = record.headers().lastHeader("traceId");
+        String traceId = traceHeader == null ? "missing" : new String(traceHeader.value(), StandardCharsets.UTF_8);
+        MDC.put("traceId", traceId);
 
         try {
             JsonNode root = objectMapper.readTree(payload);
             if (!"OrderCancelled".equals(root.path("type").asText("OrderCancelled"))) {
                 ack.acknowledge();
+                metrics.recordConsumed();
                 return;
             }
 
@@ -93,6 +101,7 @@ public class CancelCompensationConsumer {
             List<Reservation> reservations = reservationRepo.findByOrderId(event.orderId());
             if (reservations.isEmpty()) {
                 ack.acknowledge();
+                metrics.recordConsumed();
                 return;
             }
 
@@ -108,11 +117,15 @@ public class CancelCompensationConsumer {
             historyRepo.save(OrderHistory.of(order, OrderState.CANCELLED, OrderState.CANCELLED, "StockReleased"));
 
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (DuplicateEvent dup) {
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (Exception e) {
             log.warn("cancel-compensation failure on stage {}: {}", stage, e.getMessage());
             forward(payload, incomingAttempts, stage, ack);
+        } finally {
+            MDC.remove("traceId");
         }
     }
 
@@ -122,8 +135,9 @@ public class CancelCompensationConsumer {
             String reason = stage == RetryStage.RETRY_5M
                     ? DlqReason.EXHAUSTED_RETRIES.value()
                     : DlqReason.UNKNOWN.value();
-            outboxRepo.save(OutboxRow.forwardWithAttempts(
-                    stage.nextTopic(), payload, reason, nextAttempts));
+            outboxRepo.save(OutboxRow.forwardWithAttemptsAndTrace(
+                    stage.nextTopic(), payload, reason, nextAttempts, MDC.get("traceId")));
+            metrics.recordFailed();
         } catch (Exception e) {
             log.error("forward failed — letting Kafka redeliver", e);
             return;

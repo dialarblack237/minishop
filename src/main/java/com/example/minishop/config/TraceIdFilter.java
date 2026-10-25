@@ -23,12 +23,16 @@ public class TraceIdFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        String traceId = request.getHeader(HEADER);
-        if (traceId == null || traceId.isBlank()) {
+        String incoming = request.getHeader("X-Request-Id");
+        String traceId;
+        if (incoming == null || incoming.isBlank()) {
             traceId = UUID.randomUUID().toString().substring(0, 8);
+        } else {
+            traceId = incoming.trim().substring(0, Math.min(incoming.trim().length(), 64));
         }
         MDC.put(TRACE_ID, traceId);
-        response.setHeader(HEADER, traceId);
+        response.setHeader("X-Request-Id", traceId);
+        response.setHeader("X-Trace-Id", traceId);
         try {
             chain.doFilter(request, response);
         } finally {

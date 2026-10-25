@@ -28,6 +28,9 @@ public class OutboxRow {
     @Column(name = "reason", length = 40)
     private String reason;
 
+    @Column(name = "trace_id", length = 64)
+    private String traceId;
+
     @Column(nullable = false)
     private int attempts = 0;
 
@@ -73,6 +76,30 @@ public class OutboxRow {
         row.attemptsContext = attempts;
         return row;
     }
+    public static OutboxRow forEventWithTrace(UUID eventId, String topic,
+                                              String payload, String traceId) {
+        OutboxRow row = new OutboxRow();
+        row.eventId = eventId;
+        row.topic = topic;
+        row.payload = payload;
+        row.traceId = traceId;
+        return row;
+    }
+
+    public static OutboxRow forwardWithAttemptsAndTrace(String nextTopic,
+                                                        String originalPayload,
+                                                        String reason,
+                                                        int attempts,
+                                                        String traceId) {
+        OutboxRow row = new OutboxRow();
+        row.eventId = UUID.randomUUID();
+        row.topic = nextTopic;
+        row.payload = originalPayload;
+        row.reason = reason;
+        row.attemptsContext = attempts;
+        row.traceId = traceId;
+        return row;
+    }
     public void markPublished() {
         this.publishedAt = Instant.now();
     }
@@ -92,6 +119,7 @@ public class OutboxRow {
     public String getReason() { return reason; }
     public Instant getPublishedAt() { return publishedAt; }
     public int getAttempts()      { return attempts; }
-     public Integer getAttemptsContext() { return attemptsContext; }
+    public Integer getAttemptsContext() { return attemptsContext; }
+    public String getTraceId() { return traceId; }
     public Instant getCreatedAt() { return createdAt; }
 }
