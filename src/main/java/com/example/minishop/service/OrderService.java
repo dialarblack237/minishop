@@ -86,9 +86,11 @@ public class OrderService {
         Order saved = orderRepo.save(order);
         historyRepo.save(OrderHistory.of(saved, null, OrderState.CREATED, "OrderCreated"));
 
+        String traceId = org.slf4j.MDC.get("traceId");
         UUID eventId = UUID.randomUUID();
         OrderCreated event = OrderCreated.from(eventId, saved);
-        outboxRepo.save(OutboxRow.forEvent(eventId, "orders", toJson(event)));
+        outboxRepo.save(OutboxRow.forEventWithTrace(
+                eventId, "orders", toJson(event), traceId));
 
         return OrderDto.from(saved);
     }

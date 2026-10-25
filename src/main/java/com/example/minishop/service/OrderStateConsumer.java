@@ -21,6 +21,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -40,19 +41,22 @@ public class OrderStateConsumer {
     private final DedupeService dedupeService;
     private final OutboxRepository outboxRepo;
     private final ObjectMapper objectMapper;
+    private final PipelineMetrics metrics;
 
     public OrderStateConsumer(OrderRepository orderRepo,
                               OrderHistoryRepository historyRepo,
                               OrderStateMachine stateMachine,
                               DedupeService dedupeService,
                               OutboxRepository outboxRepo,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              PipelineMetrics metrics) {
         this.orderRepo = orderRepo;
         this.historyRepo = historyRepo;
         this.stateMachine = stateMachine;
         this.dedupeService = dedupeService;
         this.outboxRepo = outboxRepo;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     @KafkaListener(topics = "orders", groupId = "order-state-service")
@@ -79,6 +83,9 @@ public class OrderStateConsumer {
     public void consume(ConsumerRecord<String, String> record, RetryStage stage, Acknowledgment ack) {
         String payload = record.value();
         int incomingAttempts = readAttempts(record);
+        Header traceHeader = record.headers().lastHeader("traceId");
+        String traceId = traceHeader == null ? "missing" : new String(traceHeader.value(), StandardCharsets.UTF_8);
+        MDC.put("traceId", traceId);
 
         try {
             JsonNode root = objectMapper.readTree(payload);
@@ -104,14 +111,19 @@ public class OrderStateConsumer {
                 default -> { }
             }
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (DuplicateEvent dup) {
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (IllegalStateTransition illegal) {
             log.info("illegal transition — dropping: {}", illegal.getMessage());
             ack.acknowledge();
+            metrics.recordConsumed();
         } catch (Exception e) {
             log.warn("state failure on stage {}: {}", stage, e.getMessage());
             forward(payload, incomingAttempts, stage, ack);
+        } finally {
+            MDC.remove("traceId");
         }
     }
 
@@ -133,8 +145,9 @@ public class OrderStateConsumer {
         if (after == OrderState.CANCELLED) {
             OrderCancelled cancelled = new OrderCancelled(
                     UUID.randomUUID(), orderId, reason == null ? "unknown" : reason);
-            outboxRepo.save(OutboxRow.forEvent(
-                    cancelled.eventId(), "orders", objectMapper.writeValueAsString(cancelled)));
+            outboxRepo.save(OutboxRow.forEventWithTrace(
+                    cancelled.eventId(), "orders", objectMapper.writeValueAsString(cancelled),
+                    MDC.get("traceId")));
         }
     }
 
@@ -144,8 +157,9 @@ public class OrderStateConsumer {
             String reason = stage == RetryStage.RETRY_5M
                     ? DlqReason.EXHAUSTED_RETRIES.value()
                     : DlqReason.UNKNOWN.value();
-            outboxRepo.save(OutboxRow.forwardWithAttempts(
-                    stage.nextTopic(), payload, reason, nextAttempts));
+            outboxRepo.save(OutboxRow.forwardWithAttemptsAndTrace(
+                    stage.nextTopic(), payload, reason, nextAttempts, MDC.get("traceId")));
+            metrics.recordFailed();
         } catch (Exception e) {
             log.error("forward failed — letting Kafka redeliver", e);
             return;
