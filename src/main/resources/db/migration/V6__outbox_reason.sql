@@ -1,0 +1,2 @@
+ALTER TABLE outbox
+  ADD COLUMN reason VARCHAR(40);
