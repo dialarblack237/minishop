@@ -26,3 +26,8 @@ desktop.ini
 data/
 kafka-data/
 *.pid
+
+# ---- temp files ----
+openapi-check.json
+body.json
+update.json
