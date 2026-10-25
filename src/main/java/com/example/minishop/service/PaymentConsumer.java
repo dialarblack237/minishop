@@ -101,7 +101,10 @@ public class PaymentConsumer {
 
     private void forward(String payload, RetryStage stage, Acknowledgment ack) {
         try {
-            outboxRepo.save(OutboxRow.forward(stage.nextTopic(), payload));
+            String reason = stage == RetryStage.RETRY_5M
+                    ? DlqReason.EXHAUSTED_RETRIES.value()
+                    : DlqReason.UNKNOWN.value();
+            outboxRepo.save(OutboxRow.forward(stage.nextTopic(), payload, reason));
         } catch (Exception e) {
             log.error("forward failed — letting Kafka redeliver", e);
             return;
