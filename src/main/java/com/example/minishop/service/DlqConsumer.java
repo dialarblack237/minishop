@@ -26,13 +26,27 @@ public class DlqConsumer {
     @KafkaListener(topics = "orders.DLQ", groupId = "dlq-audit")
     public void onDlq(ConsumerRecord<String, String> record, Acknowledgment ack) {
         String reason = readReason(record);
-        DlqMessage saved = dlqRepo.save(new DlqMessage(
-                record.topic(), record.key(), reason, record.value()));
+        int attempts = readAttempts(record);
 
-        log.warn("DLQ message stored: id={} reason={} key={}",
-                saved.getId(), reason, record.key());
+        DlqMessage saved = new DlqMessage(
+                record.topic(), record.key(), reason, record.value());
+        saved.setAttempts(attempts);
+        dlqRepo.save(saved);
+
+        log.warn("DLQ message stored: id={} reason={} attempts={} key={}",
+                saved.getId(), reason, attempts, record.key());
 
         ack.acknowledge();
+    }
+
+    private int readAttempts(ConsumerRecord<String, String> record) {
+        Header header = record.headers().lastHeader("attempts");
+        if (header == null) return 0;
+        try {
+            return Integer.parseInt(new String(header.value(), StandardCharsets.UTF_8));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private String readReason(ConsumerRecord<String, String> record) {

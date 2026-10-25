@@ -10,6 +10,8 @@ import com.example.minishop.repository.ProductRepository;
 import com.example.minishop.repository.ReservationRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -17,6 +19,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -45,27 +48,30 @@ public class InventoryConsumer {
     }
 
     @KafkaListener(topics = "orders", groupId = "inventory-service")
-    public void onMain(String payload, Acknowledgment ack) {
-        consume(payload, RetryStage.MAIN, ack);
+    public void onMain(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        consume(record, RetryStage.MAIN, ack);
     }
 
     @KafkaListener(topics = "orders.retry.5s", groupId = "inventory-service")
-    public void onRetry5s(String payload, Acknowledgment ack) {
-        consume(payload, RetryStage.RETRY_5S, ack);
+    public void onRetry5s(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        consume(record, RetryStage.RETRY_5S, ack);
     }
 
     @KafkaListener(topics = "orders.retry.30s", groupId = "inventory-service")
-    public void onRetry30s(String payload, Acknowledgment ack) {
-        consume(payload, RetryStage.RETRY_30S, ack);
+    public void onRetry30s(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        consume(record, RetryStage.RETRY_30S, ack);
     }
 
     @KafkaListener(topics = "orders.retry.5m", groupId = "inventory-service")
-    public void onRetry5m(String payload, Acknowledgment ack) {
-        consume(payload, RetryStage.RETRY_5M, ack);
+    public void onRetry5m(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        consume(record, RetryStage.RETRY_5M, ack);
     }
 
     @Transactional
-    public void consume(String payload, RetryStage stage, Acknowledgment ack) {
+    public void consume(ConsumerRecord<String, String> record, RetryStage stage, Acknowledgment ack) {
+        String payload = record.value();
+        int incomingAttempts = readAttempts(record);
+
         try {
             JsonNode root = objectMapper.readTree(payload);
             if (!"OrderCreated".equals(root.path("type").asText("OrderCreated"))) {
@@ -98,24 +104,35 @@ public class InventoryConsumer {
 
             ack.acknowledge();
         } catch (DuplicateEvent dup) {
-            log.info("skipping duplicate OrderCreated");
             ack.acknowledge();
         } catch (Exception e) {
             log.warn("inventory failure on stage {}: {}", stage, e.getMessage());
-            forward(payload, stage, ack);
+            forward(payload, incomingAttempts, stage, ack);
         }
     }
 
-    private void forward(String payload, RetryStage stage, Acknowledgment ack) {
+    private void forward(String payload, int incomingAttempts, RetryStage stage, Acknowledgment ack) {
         try {
+            int nextAttempts = incomingAttempts + 1;
             String reason = stage == RetryStage.RETRY_5M
                     ? DlqReason.EXHAUSTED_RETRIES.value()
                     : DlqReason.UNKNOWN.value();
-            outboxRepo.save(OutboxRow.forward(stage.nextTopic(), payload, reason));
+            outboxRepo.save(OutboxRow.forwardWithAttempts(
+                    stage.nextTopic(), payload, reason, nextAttempts));
         } catch (Exception e) {
             log.error("forward failed — letting Kafka redeliver", e);
             return;
         }
         ack.acknowledge();
+    }
+
+    private int readAttempts(ConsumerRecord<String, String> record) {
+        Header header = record.headers().lastHeader("attempts");
+        if (header == null) return 0;
+        try {
+            return Integer.parseInt(new String(header.value(), StandardCharsets.UTF_8));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
