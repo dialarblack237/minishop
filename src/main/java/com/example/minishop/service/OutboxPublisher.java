@@ -2,6 +2,7 @@ package com.example.minishop.service;
 
 import com.example.minishop.domain.OutboxRow;
 import com.example.minishop.repository.OutboxRepository;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -9,6 +10,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -42,8 +44,19 @@ public class OutboxPublisher {
                 continue;
             }
             try {
-                kafkaTemplate.send(row.getTopic(), row.getEventId().toString(), row.getPayload())
-                        .get(KAFKA_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                ProducerRecord<String, String> record = new ProducerRecord<>(
+                        row.getTopic(), row.getEventId().toString(), row.getPayload());
+
+                if (row.getAttemptsContext() != null) {
+                    record.headers().add("attempts",
+                            String.valueOf(row.getAttemptsContext()).getBytes(StandardCharsets.UTF_8));
+                }
+                if (row.getReason() != null) {
+                    record.headers().add("reason",
+                            row.getReason().getBytes(StandardCharsets.UTF_8));
+                }
+
+                kafkaTemplate.send(record).get(KAFKA_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
                 outboxService.markPublished(row.getId());
             } catch (Exception e) {

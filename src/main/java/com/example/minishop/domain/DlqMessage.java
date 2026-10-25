@@ -29,6 +29,9 @@ public class DlqMessage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String payload;
 
+    @Column(nullable = false)
+    private int attempts = 0;
+
     @Column(name = "replayed_at")
     private Instant replayedAt;
 
@@ -54,5 +57,7 @@ public class DlqMessage {
     public String getReason()       { return reason; }
     public String getPayload()      { return payload; }
     public Instant getReplayedAt()  { return replayedAt; }
+    public int getAttempts() { return attempts; }
+    public void setAttempts(int attempts) { this.attempts = attempts; }
     public Instant getCreatedAt()   { return createdAt; }
 }

@@ -1,0 +1,5 @@
+ALTER TABLE dlq_messages
+  ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE outbox
+  ADD COLUMN attempts_context INTEGER;

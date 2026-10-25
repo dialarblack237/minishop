@@ -31,6 +31,9 @@ public class OutboxRow {
     @Column(nullable = false)
     private int attempts = 0;
 
+    @Column(name = "attempts_context")
+    private Integer attemptsContext;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -57,6 +60,19 @@ public class OutboxRow {
         row.reason = reason;
         return row;
     }
+
+    public static OutboxRow forwardWithAttempts(String nextTopic,
+                                                String originalPayload,
+                                                String reason,
+                                                int attempts) {
+        OutboxRow row = new OutboxRow();
+        row.eventId = UUID.randomUUID();
+        row.topic = nextTopic;
+        row.payload = originalPayload;
+        row.reason = reason;
+        row.attemptsContext = attempts;
+        return row;
+    }
     public void markPublished() {
         this.publishedAt = Instant.now();
     }
@@ -76,5 +92,6 @@ public class OutboxRow {
     public String getReason() { return reason; }
     public Instant getPublishedAt() { return publishedAt; }
     public int getAttempts()      { return attempts; }
+     public Integer getAttemptsContext() { return attemptsContext; }
     public Instant getCreatedAt() { return createdAt; }
 }
