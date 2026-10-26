@@ -25,6 +25,7 @@ spring:
         "[max.block.ms]": 5000
         "[request.timeout.ms]": 5000
         "[delivery.timeout.ms]": 10000
+
     consumer:
       group-id: minishop-local
       auto-offset-reset: earliest
