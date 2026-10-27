@@ -10,13 +10,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 
 @Component
 @Order(2)
@@ -47,8 +50,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         try {
             RateLimitResult result = rateLimiter.tryAcquire(key, limit.perMinute());
             if (!result.allowed()) {
-                res.setHeader("Retry-After", String.valueOf(result.retryAfterSeconds()));
-                res.setStatus(429);
+                writeRateLimited(res, req, result, limit);
                 return;
             }
         } catch (Exception redisDown) {
@@ -59,5 +61,34 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(req, res);
+    }
+
+    private void writeRateLimited(HttpServletResponse res,
+                                  HttpServletRequest req,
+                                  RateLimitResult result,
+                                  RateLimitPolicy.Limit limit) throws IOException {
+        long retryAfter = result.retryAfterSeconds();
+        res.setStatus(429);
+        res.setHeader("Retry-After", String.valueOf(retryAfter));
+        res.setHeader("X-RateLimit-Limit", String.valueOf(limit.perMinute()));
+        res.setHeader("X-RateLimit-Remaining", "0");
+        res.setHeader("X-RateLimit-Reset", Instant.now().plusSeconds(retryAfter).toString());
+
+        String traceId = MDC.get("traceId");
+        String body = String.format(
+                "{\"type\":\"https://minishop.example/errors/rate-limited\"," +
+                "\"title\":\"Too many requests\"," +
+                "\"status\":429," +
+                "\"detail\":\"You have made too many requests. Please wait %d seconds before retrying.\"," +
+                "\"instance\":\"%s\"," +
+                "\"traceId\":\"%s\"}",
+                retryAfter,
+                req.getRequestURI(),
+                traceId == null ? "" : traceId
+        );
+
+        res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        res.setCharacterEncoding("UTF-8");
+        res.getWriter().write(body);
     }
 }
