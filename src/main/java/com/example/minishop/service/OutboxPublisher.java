@@ -3,6 +3,8 @@ package com.example.minishop.service;
 import com.example.minishop.domain.OutboxRow;
 import com.example.minishop.repository.OutboxRepository;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -21,24 +23,48 @@ public class OutboxPublisher {
     private static final int BATCH_SIZE = 100;
     private static final int MAX_ATTEMPTS = 5;
     private static final long KAFKA_TIMEOUT_SECONDS = 5;
+    private static final String LOCK_NAME = "lock:outbox-publisher";
 
     private final OutboxRepository outboxRepo;
     private final OutboxService outboxService;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final PipelineMetrics metrics;
+    private final RedissonClient redisson;
 
     public OutboxPublisher(OutboxRepository outboxRepo,
                            OutboxService outboxService,
                            KafkaTemplate<String, String> kafkaTemplate,
-                           PipelineMetrics metrics) {
+                           PipelineMetrics metrics,
+                           RedissonClient redisson) {
         this.outboxRepo = outboxRepo;
         this.outboxService = outboxService;
         this.kafkaTemplate = kafkaTemplate;
         this.metrics = metrics;
+        this.redisson = redisson;
     }
 
     @Scheduled(fixedDelay = 2000)
     public void publishUnsent() {
+        RLock lock = redisson.getLock(LOCK_NAME);
+        boolean acquired = false;
+        try {
+            acquired = lock.tryLock(2, 30, TimeUnit.SECONDS);
+            if (!acquired) {
+                log.debug("outbox publisher skipped — previous run still holds lock");
+                return;
+            }
+            doPublish();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("outbox publisher interrupted while acquiring lock");
+        } finally {
+            if (acquired) {
+                lock.unlock();
+            }
+        }
+    }
+
+    private void doPublish() {
         List<OutboxRow> rows = outboxRepo.findUnsent(PageRequest.of(0, BATCH_SIZE));
         if (rows.isEmpty()) return;
 
