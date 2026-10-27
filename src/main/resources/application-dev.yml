@@ -44,14 +44,17 @@ logging:
     root: INFO
     "[com.example.minishop]": DEBUG
 
-app:
-  payments:
-    simulator:
-      mode: approve
-      slow-seconds: 2
-
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
+app:
+  payments:
+    simulator:
+      mode: approve
+      slow-seconds: 2
+  jwt:
+    secret: dev-only-secret-change-me-please-32-chars-minimum-abcdef
+    access-ttl-minutes: 15
+    refresh-ttl-days: 30

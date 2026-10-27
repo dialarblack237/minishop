@@ -1,6 +1,6 @@
 
 INSERT INTO customers (email, display_name, password_hash, role)
-SELECT 'admin@minishop.local', 'Admin', '$2a$10$PLACEHOLDER_REPLACE_IN_MODULE_9', 'ADMIN'
+SELECT 'admin@minishop.local', 'Admin', '$2a$10$Bu3p/SapSy5CdEmevK8pb.ZIybPz8QBCZL9B1sNLV4mFSVNhvMP.S', 'ADMIN'
 WHERE NOT EXISTS (SELECT 1 FROM customers WHERE email = 'admin@minishop.local');
 
 
