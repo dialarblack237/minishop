@@ -9,6 +9,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,11 +35,11 @@ public class ProductService {
         return productRepo.findAll(pageable).map(ProductDto::from);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Caching(evict = {
         @CacheEvict(cacheNames = "product", key = "#id"),
         @CacheEvict(cacheNames = "product:list", allEntries = true)
     })
-    
     @Transactional
     public ProductDto update(long id, ProductRequest req) {
         Product p = productRepo.findById(id)
@@ -49,6 +50,7 @@ public class ProductService {
         return ProductDto.from(productRepo.save(p));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @CacheEvict(cacheNames = "product:list", allEntries = true)
     @Transactional
     public ProductDto create(ProductRequest req) {
