@@ -17,3 +17,7 @@ SELECT 3, 'Coffee grinder', 3500, 20
 WHERE NOT EXISTS (SELECT 1 FROM products WHERE id = 3);
 
 ALTER TABLE products ALTER COLUMN id RESTART WITH 4;
+
+INSERT INTO customers (email, display_name, password_hash, role)
+SELECT 'sam@minishop.local', 'Sam', '$2a$10$Bu3p/SapSy5CdEmevK8pb.ZIybPz8QBCZL9B1sNLV4mFSVNhvMP.S', 'CUSTOMER'
+WHERE NOT EXISTS (SELECT 1 FROM customers WHERE email = 'sam@minishop.local');

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,8 +34,7 @@ public class ProductController {
         this.service = service;
     }
 
-    @Operation(
-            summary = "List products, paginated",
+    @Operation(summary = "List products, paginated",
             description = "Returns one page of products. Use ?page=&size=&sort=. Page size is capped at 100.")
     @ApiResponse(responseCode = "200", description = "A page of products")
     @GetMapping
@@ -45,8 +45,7 @@ public class ProductController {
         return ResponseEntity.ok(service.list(pageable));
     }
 
-    @Operation(
-            summary = "Read one product by id",
+    @Operation(summary = "Read one product by id",
             description = "Returns 200 with the product, or 404 if it does not exist.")
     @ApiResponse(responseCode = "200", description = "Product found")
     @ApiResponse(responseCode = "404", description = "Product not found")
@@ -55,11 +54,11 @@ public class ProductController {
         return ResponseEntity.ok(service.get(id));
     }
 
-    @Operation(
-            summary = "Create a product",
-            description = "Returns 201 with a Location header. Requires ADMIN role (wired in Module 9).")
+    @Operation(summary = "Create a product", description = "Returns 201 with a Location header. Requires ADMIN role.")
     @ApiResponse(responseCode = "201", description = "Product created")
     @ApiResponse(responseCode = "400", description = "Validation failed")
+    @ApiResponse(responseCode = "403", description = "Requires ADMIN role")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ProductDto> create(@Valid @RequestBody ProductRequest req,
                                              UriComponentsBuilder uriBuilder) {
@@ -70,12 +69,13 @@ public class ProductController {
         return ResponseEntity.created(location).body(created);
     }
 
-    @Operation(
-            summary = "Update a product",
-            description = "Returns 204 No Content. Requires ADMIN role (wired in Module 9).")
+    @Operation(summary = "Update a product",
+            description = "Returns 204 No Content. Requires ADMIN role.")
     @ApiResponse(responseCode = "204", description = "Product updated")
     @ApiResponse(responseCode = "404", description = "Product not found")
     @ApiResponse(responseCode = "400", description = "Validation failed")
+    @ApiResponse(responseCode = "403", description = "Requires ADMIN role")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable long id,
                                        @Valid @RequestBody ProductRequest req) {

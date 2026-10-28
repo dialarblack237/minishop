@@ -31,3 +31,8 @@ kafka-data/
 openapi-check.json
 body.json
 update.json
+customer.json
+login-admin.json
+login-customer.json
+product.json
+

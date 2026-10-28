@@ -83,6 +83,16 @@ public class ErrorHandler {
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong", e);
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.AuthenticationCredentialsNotFoundException.class)
+    public ProblemDetail onUnauthenticated(org.springframework.security.authentication.AuthenticationCredentialsNotFoundException e) {
+        return problem(HttpStatus.UNAUTHORIZED, "Authentication required", e);
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ProblemDetail onAccessDenied(org.springframework.security.access.AccessDeniedException e) {
+        return problem(HttpStatus.FORBIDDEN, "Access denied", e);
+    }
+
     private ProblemDetail problem(HttpStatus status, String title, Exception e) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, e.getMessage());
         pd.setTitle(title);
