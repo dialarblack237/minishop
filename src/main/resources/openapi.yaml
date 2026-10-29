@@ -282,12 +282,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-        '401':
-          description: Not authenticated.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Product not found.
           content:
@@ -556,13 +550,14 @@ components:
           type: boolean
         last:
           type: boolean
+          format: boolean
         empty:
           type: boolean
 
     ProblemDetail:
       type: object
-      description: RFC 7807 problem-detail envelope (ErrorHandler).
-      required: [type, title, status, detail, traceId]
+      description: RFC 7807 problem-detail envelope (ErrorHandler). Only type, title, status are guaranteed; detail, instance, traceId, and errors are optional.
+      required: [type, title, status]
       properties:
         type:
           type: string

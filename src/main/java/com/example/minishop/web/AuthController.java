@@ -43,7 +43,11 @@ public class AuthController {
 
     @Operation(summary = "Login",
             description = "Returns a short-lived access token and a long-lived refresh token.")
-    @ApiResponse(responseCode = "200", description = "Tokens issued")
+    @ApiResponse(responseCode = "200", description = "Tokens issued",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                    mediaType = "application/json",
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = TokenPair.class)))
+    @ApiResponse(responseCode = "400", description = "Validation failed")
     @ApiResponse(responseCode = "401", description = "Invalid credentials")
     @PostMapping("/login")
     public ResponseEntity<TokenPair> login(@Valid @RequestBody LoginRequest req) {
@@ -55,7 +59,11 @@ public class AuthController {
 
     @Operation(summary = "Refresh",
             description = "Exchanges a valid refresh token for a new access + refresh pair. The old refresh token is revoked.")
-    @ApiResponse(responseCode = "200", description = "New token pair")
+    @ApiResponse(responseCode = "200", description = "New token pair",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                    mediaType = "application/json",
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = TokenPair.class)))
+    @ApiResponse(responseCode = "400", description = "Validation failed")
     @ApiResponse(responseCode = "401", description = "Refresh token invalid, expired, or revoked")
     @PostMapping("/refresh")
     public ResponseEntity<TokenPair> refresh(@Valid @RequestBody RefreshRequest req) {
@@ -85,6 +93,7 @@ public class AuthController {
 
     @Operation(summary = "Logout", description = "Revokes the whole refresh-token family.")
     @ApiResponse(responseCode = "204", description = "Logged out")
+    @ApiResponse(responseCode = "400", description = "Validation failed")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest req) {
         refreshService.lookup(req.refreshToken())
