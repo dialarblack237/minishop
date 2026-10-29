@@ -1,5 +1,8 @@
 # Load-test baseline
 
+The k6 script that produces these runs is documented in
+[`../k6/README.md`](../k6/README.md).
+
 Every load test writes one dated block here, with the workload, the cache
 state, the numbers, and the SLO the numbers are compared against. Future runs
 are compared against the most recent block for the **same** workload.
