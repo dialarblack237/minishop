@@ -7,6 +7,8 @@ import com.example.minishop.service.OrderService;
 import com.example.minishop.web.dto.OrderDto;
 import com.example.minishop.web.dto.OrderRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -39,8 +41,12 @@ public class OrderController {
             description = "Validates the cart, snapshots prices, and returns 202 Accepted with the order id. " +
                           "Requires Idempotency-Key header. Duplicate keys replay the original response. " +
                           "Full pipeline runs asynchronously.")
-    @ApiResponse(responseCode = "202", description = "Order accepted for processing")
-    @ApiResponse(responseCode = "200", description = "Duplicate key — original response replayed")
+    @ApiResponse(responseCode = "202", description = "Order accepted for processing",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = OrderDto.class)))
+    @ApiResponse(responseCode = "200", description = "Duplicate key — original response replayed",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = OrderDto.class)))
     @ApiResponse(responseCode = "400", description = "Validation failed or missing Idempotency-Key")
     @ApiResponse(responseCode = "404", description = "Product not found")
     @ApiResponse(responseCode = "409", description = "Insufficient stock")

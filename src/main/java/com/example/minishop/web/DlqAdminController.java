@@ -4,6 +4,7 @@ import com.example.minishop.domain.DlqMessage;
 import com.example.minishop.repository.DlqMessageRepository;
 import com.example.minishop.service.DlqMessageNotFound;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -34,6 +35,11 @@ public class DlqAdminController {
             description = "Re-publishes the message to its original topic with the original eventId. " +
                           "If the event was already processed (dedupe), the replay is a no-op. " +
                           "If it failed before, the retry does the work.")
+    @ApiResponse(responseCode = "202", description = "Replay accepted — message re-published")
+    @ApiResponse(responseCode = "401", description = "Not authenticated")
+    @ApiResponse(responseCode = "403", description = "Requires ADMIN role")
+    @ApiResponse(responseCode = "404", description = "DLQ message not found")
+    @ApiResponse(responseCode = "409", description = "Message already replayed")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/replay")
     public ResponseEntity<Void> replay(@PathVariable long id) throws Exception {

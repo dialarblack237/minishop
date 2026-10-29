@@ -4,6 +4,8 @@ import com.example.minishop.service.ProductService;
 import com.example.minishop.web.dto.ProductDto;
 import com.example.minishop.web.dto.ProductRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,7 +38,10 @@ public class ProductController {
 
     @Operation(summary = "List products, paginated",
             description = "Returns one page of products. Use ?page=&size=&sort=. Page size is capped at 100.")
-    @ApiResponse(responseCode = "200", description = "A page of products")
+    @ApiResponse(responseCode = "200", description = "A page of products",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = Page.class)))
+    @ApiResponse(responseCode = "400", description = "Unknown sort field")
     @GetMapping
     public ResponseEntity<Page<ProductDto>> list(Pageable pageable) {
         if (pageable.getPageSize() > 100) {
@@ -47,7 +52,9 @@ public class ProductController {
 
     @Operation(summary = "Read one product by id",
             description = "Returns 200 with the product, or 404 if it does not exist.")
-    @ApiResponse(responseCode = "200", description = "Product found")
+    @ApiResponse(responseCode = "200", description = "Product found",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = ProductDto.class)))
     @ApiResponse(responseCode = "404", description = "Product not found")
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> get(@PathVariable long id) {
@@ -55,8 +62,11 @@ public class ProductController {
     }
 
     @Operation(summary = "Create a product", description = "Returns 201 with a Location header. Requires ADMIN role.")
-    @ApiResponse(responseCode = "201", description = "Product created")
+    @ApiResponse(responseCode = "201", description = "Product created",
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = ProductDto.class)))
     @ApiResponse(responseCode = "400", description = "Validation failed")
+    @ApiResponse(responseCode = "401", description = "Not authenticated")
     @ApiResponse(responseCode = "403", description = "Requires ADMIN role")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -72,9 +82,10 @@ public class ProductController {
     @Operation(summary = "Update a product",
             description = "Returns 204 No Content. Requires ADMIN role.")
     @ApiResponse(responseCode = "204", description = "Product updated")
-    @ApiResponse(responseCode = "404", description = "Product not found")
     @ApiResponse(responseCode = "400", description = "Validation failed")
+    @ApiResponse(responseCode = "401", description = "Not authenticated")
     @ApiResponse(responseCode = "403", description = "Requires ADMIN role")
+    @ApiResponse(responseCode = "404", description = "Product not found")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable long id,
