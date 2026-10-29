@@ -36,3 +36,6 @@ customer.json
 login-admin.json
 login-customer.json
 product.json
+
+# ---- k6 local run outputs (added in 10.4.3) ----
+k6/results/
