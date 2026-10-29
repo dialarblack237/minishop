@@ -1,0 +1,64 @@
+# Test profile — activated with @ActiveProfiles("test").
+# Same H2, same Kafka, same Flyway as dev, except:
+# Redis points at DB index 15 (dev uses the default 0). The test's FLUSHDB clears
+# only 15, so it never touches the developer's local cache on 0.
+# Redis has 16 numbered DBs (0–15); 15 is a project convention, not a Redis rule.
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:minishop-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: minishop-test
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: manual
+
+  data:
+    redis:
+      # Dedicated DB index for tests — dev uses index 0 (the default).
+      # The test's FLUSHDB clears only 15, never the developer's local cache.
+      url: redis://localhost:6379/15
+
+logging:
+  level:
+    root: INFO
+    "[com.example.minishop]": DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+app:
+  payments:
+    simulator:
+      mode: approve
+      slow-seconds: 0     # faster tests: no real wait in the payment simulator
+  jwt:
+    secret: test-only-secret-please-replace-with-32-plus-chars-abcdef
+    access-ttl-minutes: 15
+    refresh-ttl-days: 30
