@@ -41,7 +41,7 @@ public class OutboxRow {
     private Instant createdAt = Instant.now();
 
 
-    protected OutboxRow() {}
+    public OutboxRow() {}
 
     public static OutboxRow forEvent(UUID eventId, String topic, String payload) {
         OutboxRow row = new OutboxRow();
