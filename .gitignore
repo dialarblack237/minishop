@@ -19,6 +19,7 @@ desktop.ini
 *.log
 .env
 .env.*
+!*.env.example
 *.pem
 *.key
 
@@ -35,4 +36,3 @@ customer.json
 login-admin.json
 login-customer.json
 product.json
-
