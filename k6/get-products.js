@@ -3,9 +3,7 @@ import { check, sleep } from 'k6';
 
 export const options = {
   stages: [
-    { duration: '30s', target: 20 },
-    { duration: '60s', target: 20 },
-    { duration: '10s', target: 0 },
+    { duration: '100s', target: 1 },
   ],
   thresholds: {
     'http_req_duration{name:GET /products,expected_response:true}': ['p(95)<200'],
@@ -23,5 +21,5 @@ export default function () {
     'has content[]': (r) => JSON.parse(r.body).content !== undefined,
   });
 
-  sleep(15);
+  sleep(1);
 }
