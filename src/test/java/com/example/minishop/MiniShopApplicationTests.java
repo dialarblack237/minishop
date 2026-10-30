@@ -2,10 +2,10 @@ package com.example.minishop;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;   // <-- add this import
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@ActiveProfiles("dev")   // <-- add this line: test context uses dev profile
+@ActiveProfiles("test")
 class MiniShopApplicationTests {
 
     @Test
