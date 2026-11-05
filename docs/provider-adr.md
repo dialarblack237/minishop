@@ -67,3 +67,38 @@ copying `KAFKA_BOOTSTRAP_SERVERS` / `KAFKA_SASL_USER` / `KAFKA_SASL_PASSWORD`
 into Render env vars is deferred to Module 12.2 (App Hosting), where the
 first actual deploy makes them necessary. Until then, the decision sits
 here, documented, and nothing is broken by its absence.
+
+
+## Scoring — three criteria, three providers
+
+For a reader who wants the matrix rather than the prose. Same decision as
+the section above; this is the "why" made visual.
+
+| Provider | Latency (region) | Limits (free tier) | Auth model |
+|---|---|---|---|
+| **Redpanda Cloud** | ✅ Free-tier region close to `aws-us-east-2` | ✅ Enough topics (≥5) and connections for v1 and v2 | ✅ SASL/SCRAM over TLS, supported natively by Spring Kafka |
+| **Confluent Cloud** | ✅ Many regions including close to Ohio | ⚠️ $400 credit for 30 days, then paid — not a permanent free tier | ✅ SASL/PLAIN over TLS, supported natively |
+| **Upstash Kafka** | ✅ One region available close to Ohio | ❌ Free tier limits topics to **one per project**; MiniShop needs ≥2 (`orders`, `orders.DLQ`) in v1, ≥5 with the 7.2.1 retry ladder | ✅ SASL over TLS, supported natively |
+
+### Reading the matrix
+
+Each provider must pass **all three** criteria at "acceptable" — not two out
+of three. One red dial is an outage waiting to happen at the worst moment:
+
+- **Confluent** fails on **limits**: the free tier is a 30-day credit, and
+  the credit running out mid-project is exactly the kind of surprise the
+  dev-vs-prod table exists to prevent.
+- **Upstash** fails on **limits**: the one-topic-per-project cap cannot
+  accommodate `orders` + `orders.DLQ`, and cannot accommodate v2's five
+  topics at all. Latency and auth are both fine; the limit alone is
+  disqualifying.
+- **Redpanda** passes all three. It is not the *best* on any single dial
+  (Confluent has more regions; Upstash has the simplest sign-up), but it is
+  the only option where no dial is red.
+
+### Note on choosing "not the best on any dial"
+
+A provider that "wins nothing individually" can still be the right choice
+if it is the only one whose *worst* dial is still acceptable. That is the
+whole decision rule, and it is why this ADR is titled "managed Kafka
+provider choice" rather than "managed Kafka provider ranking".
