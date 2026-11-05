@@ -13,7 +13,7 @@ difference is not in this table, it is not officially "known".
 | Component      | Dev (local)                                | Prod (Render + managed)                                       | Matters? |
 |----------------|--------------------------------------------|----------------------------------------------------------------|----------|
 | Java version   | JDK 21 (Temurin)                            | JDK 21 (Render runtime default for Spring Boot)                | No — same, per Module 3.1.1 |
-| Database       | Postgres 16, localhost:5432                 | Neon free-tier Postgres 15, TLS required, connection URL in env var | **Yes** — a Postgres 16-only feature that "worked in dev" will fail on 15. Smoke test exercises a real query. |
+| Database       | Postgres 15, localhost:5432                 | Neon free-tier Postgres 15, TLS required, connection URL in env var | **Yes** — a Postgres 16-only feature that "worked in dev" will fail on 15. Smoke test exercises a real query. |
 | Redis          | Redis 7 (Memurai on Windows), localhost:6379, no TLS, no auth | Upstash Redis, TLS + token, `rediss://` scheme                  | **Yes** — TLS misconfig is the classic "works in dev, fails in prod". Client must use `rediss://` (extra `s`). |
 | Kafka          | Kafka 3.9 KRaft localhost:9092, no auth, 1 partition | Redpanda / Upstash Kafka free tier, SASL + SSL, 3 partitions | **Yes** — SASL auth and partition count change consumer-group behaviour; consumer sees 3 partitions. |
 | JWT signing key | Dev key from `application-dev.yml`         | Prod key in Render env var, never in repo                      | **Yes** — a token signed in dev will NOT verify in prod. By design (Module 9.1.1). |
