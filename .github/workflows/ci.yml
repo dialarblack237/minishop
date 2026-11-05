@@ -39,3 +39,30 @@ jobs:
           name: minishop-jar
           path: target/minishop-*.jar
           retention-days: 14
+
+  # ── THE CONTRACT JOB — separate job, not step. ──────
+  contract:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Contract test
+        run: ./mvnw -B -Dtest=OpenApiContractTest -DfailIfNoTests=false test
+
+      - name: Upload contract report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-report
+          path: target/surefire-reports/*
+          retention-days: 14
