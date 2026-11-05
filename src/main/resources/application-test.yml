@@ -1,3 +1,9 @@
+# Test profile — activated with @ActiveProfiles("test").
+# Same H2, same Kafka, same Flyway as dev, except:
+# Redis points at DB index 15 (dev uses the default 0). The test's FLUSHDB clears
+# only 15, so it never touches the developer's local cache on 0.
+# Redis has 16 numbered DBs (0–15); 15 is a project convention, not a Redis rule.
+
 spring:
   datasource:
     url: jdbc:h2:mem:minishop-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
@@ -16,11 +22,6 @@ spring:
       ddl-auto: validate
     show-sql: false
 
-  autoconfigure:
-    exclude:
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -38,6 +39,8 @@ spring:
 
   data:
     redis:
+      # Dedicated DB index for tests — dev uses index 0 (the default).
+      # The test's FLUSHDB clears only 15, never the developer's local cache.
       url: redis://localhost:6379/15
 
 logging:
@@ -55,7 +58,7 @@ app:
   payments:
     simulator:
       mode: approve
-      slow-seconds: 0
+      slow-seconds: 0     # faster tests: no real wait in the payment simulator
   jwt:
     secret: test-only-secret-please-replace-with-32-plus-chars-abcdef
     access-ttl-minutes: 15

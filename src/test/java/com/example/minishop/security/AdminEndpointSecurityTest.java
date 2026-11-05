@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.example.minishop.config.TestRedissonConfig;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -18,7 +19,9 @@ import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 @SpringBootTest
+@org.springframework.context.annotation.Import(TestRedissonConfig.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AdminEndpointSecurityTest {
