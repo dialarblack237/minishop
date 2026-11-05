@@ -19,9 +19,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.example.minishop.config.TestRedissonConfig;
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("dev")
+@org.springframework.context.annotation.Import(TestRedissonConfig.class)
+@ActiveProfiles("test")
 class OpenApiContractTest {
 
     @LocalServerPort

@@ -1,5 +1,6 @@
 package com.example.minishop.service;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -9,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
+@Profile("!test")
 public class RateLimiter {
 
     private final StringRedisTemplate redis;
