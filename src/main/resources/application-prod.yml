@@ -36,6 +36,16 @@ spring:
     redis:
       url: ${REDIS_URL}
 
+# ── Redisson explicit configuration ────────────────────────────────────
+# Redisson's auto-config does not reliably read spring.data.redis.url in
+# Spring Boot 3. This block tells Redisson directly where to connect,
+# using the same REDIS_URL env var. This bypasses the property binding
+# issue that caused Redisson to ignore the url and attempt a plaintext
+# localhost connection.
+redisson:
+  single-server-config:
+    address: ${REDIS_URL}
+
 management:
   endpoint:
     health:
@@ -46,15 +56,12 @@ server:
 
 # ── Application properties ──────────────────────────────────
 # These were present in application-dev.yml and application-test.yml
-# but missing in application-prod.yml. All five are required — the app
-# failed on the first unresolved one (app.jwt.secret) and would have
-# failed on the next four in sequence. Values that are secrets come
-# from env vars; the rest are prod-specific literals.
+# but missing in application-prod.yml. All five are required.
 app:
   payments:
     simulator:
       mode: approve
-      slow-seconds: 0        # prod: no artificial delay; simulator returns immediately
+      slow-seconds: 0        # prod: no artificial delay
   jwt:
     secret: ${JWT_SIGNING_KEY}
     access-ttl-minutes: 15
