@@ -13,6 +13,15 @@ spring:
     show-sql: false        # never log SQL with parameters in prod
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      "[security.protocol]": SASL_SSL
+      "[sasl.mechanism]": SCRAM-SHA-256
+      "[sasl.jaas.config]": >
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_SASL_USER}"
+        password="${KAFKA_SASL_PASSWORD}";
+      "[ssl.truststore.location]": classpath:ca.pem
+      "[ssl.truststore.type]": PEM
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -31,3 +40,6 @@ management:
   endpoint:
     health:
       show-details: never   # prod: do not leak component status details
+
+server:
+  port: ${PORT:8080}

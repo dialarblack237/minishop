@@ -21,6 +21,10 @@ desktop.ini
 .env.*
 !*.env.example
 *.pem
+# Exception: Aiven's public CA certificate. Not a secret — every Aiven
+# customer downloads the same file to verify Aiven's TLS. Must be on the
+# classpath for Spring Kafka's truststore (12.2.1).
+!src/main/resources/ca.pem
 *.key
 
 # ---- Local Kafka/Redis data (added in 3.1.2/3.1.3) ----
