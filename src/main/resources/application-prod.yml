@@ -43,3 +43,19 @@ management:
 
 server:
   port: ${PORT:8080}
+
+# ── Application properties ──────────────────────────────────
+# These were present in application-dev.yml and application-test.yml
+# but missing in application-prod.yml. All five are required — the app
+# failed on the first unresolved one (app.jwt.secret) and would have
+# failed on the next four in sequence. Values that are secrets come
+# from env vars; the rest are prod-specific literals.
+app:
+  payments:
+    simulator:
+      mode: approve
+      slow-seconds: 0        # prod: no artificial delay; simulator returns immediately
+  jwt:
+    secret: ${JWT_SIGNING_KEY}
+    access-ttl-minutes: 15
+    refresh-ttl-days: 30
