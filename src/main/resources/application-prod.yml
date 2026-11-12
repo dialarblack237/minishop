@@ -3,6 +3,9 @@
 # Never write a real secret here. If it appears in the repo,
 # it is compromised.
 spring:
+    # Disable Redisson's auto-configuration; we provide our own bean in RedissonConfig.java
+  autoconfigure:
+    exclude: org.redisson.spring.starter.RedissonAutoConfigurationV2
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USER}
