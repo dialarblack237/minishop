@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minishop
+  namespace: minishop
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: minishop.example.com   # replace with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minishop
+                port:
+                  name: http
